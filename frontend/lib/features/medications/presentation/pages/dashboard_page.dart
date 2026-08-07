@@ -1,7 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../models/medicine_model.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  Future<List<MedicineModel>>? _medicationsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMedications();
+  }
+
+  void _fetchMedications() {
+    setState(() {
+      _medicationsFuture = _loadData();
+    });
+  }
+
+  Future<List<MedicineModel>> _loadData() async {
+    try {
+      final dio = DioClient().dio;
+      final response = await dio.get('/medicines/');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((json) => MedicineModel.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load medications');
+      }
+    } catch (e) {
+      throw Exception('Error: \$e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,39 +61,61 @@ class DashboardPage extends StatelessWidget {
           const SizedBox(width: 16),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Today\'s Medications',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+      body: FutureBuilder<List<MedicineModel>>(
+        future: _medicationsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF00FFB2)));
+          } else if (snapshot.hasError) {
+            return Center(child: Text(snapshot.error.toString(), style: const TextStyle(color: Colors.red)));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No medications scheduled for today.', style: TextStyle(color: Colors.white70)));
+          }
+
+          final medications = snapshot.data!;
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Today\'s Medications',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...medications.expand((med) {
+                  // A medicine might have multiple schedules, so we build a card for each schedule
+                  if (med.schedules.isEmpty) {
+                    return [_buildMedicationCard(
+                      medicineId: med.id,
+                      scheduleId: '',
+                      medicineName: med.medicineName,
+                      time: 'Anytime',
+                      slot: 'CUSTOM',
+                      type: med.type.name,
+                      foodRelation: med.foodRelation.name,
+                      status: med.todayStatus.name,
+                    )];
+                  }
+                  return med.schedules.map((schedule) => _buildMedicationCard(
+                    medicineId: med.id,
+                    scheduleId: schedule.id,
+                    medicineName: med.medicineName,
+                    time: schedule.time,
+                    slot: schedule.slot.name,
+                    type: med.type.name,
+                    foodRelation: med.foodRelation.name,
+                    status: med.todayStatus.name,
+                  )).toList();
+                }),
+              ],
             ),
-            const SizedBox(height: 16),
-            _buildMedicationCard(
-              medicineName: 'Amoxicillin 500mg',
-              time: '08:00 AM',
-              slot: 'MORNING',
-              type: 'CAPSULE',
-              foodRelation: 'AFTER_FOOD',
-              status: 'TAKEN',
-            ),
-            const SizedBox(height: 16),
-            _buildMedicationCard(
-              medicineName: 'Lisinopril 10mg',
-              time: '02:00 PM',
-              slot: 'AFTERNOON',
-              type: 'TABLET',
-              foodRelation: 'BEFORE_FOOD',
-              status: 'PENDING',
-            ),
-          ],
-        ),
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF00FFB2),
@@ -70,6 +129,8 @@ class DashboardPage extends StatelessWidget {
   }
 
   Widget _buildMedicationCard({
+    required String medicineId,
+    required String scheduleId,
     required String medicineName,
     required String time,
     required String slot,
@@ -80,6 +141,7 @@ class DashboardPage extends StatelessWidget {
     final bool isTaken = status == 'TAKEN';
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: const Color(0xFF141F32),
         borderRadius: BorderRadius.circular(16),
@@ -130,7 +192,18 @@ class DashboardPage extends StatelessWidget {
             const Icon(Icons.check_circle, color: Color(0xFF00FFB2), size: 28)
           else
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () async {
+                try {
+                  final dio = DioClient().dio;
+                  await dio.post('/medicines/\$medicineId/log', data: {
+                    'schedule_id': scheduleId,
+                    'status': 'TAKEN'
+                  });
+                  _fetchMedications(); // Refresh data
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to log dose: \$e')));
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00FFB2),
                 foregroundColor: const Color(0xFF0A0E17),

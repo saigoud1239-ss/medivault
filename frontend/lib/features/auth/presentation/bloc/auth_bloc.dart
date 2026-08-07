@@ -1,4 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/network/dio_client.dart';
 
 // Events
 abstract class AuthEvent {}
@@ -24,9 +27,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginRequested>((event, emit) async {
       emit(AuthLoading());
       try {
-        // Mock API call to FastAPI backend
-        await Future.delayed(const Duration(seconds: 2));
-        emit(AuthSuccess());
+        final dio = DioClient().dio;
+        // FastAPI OAuth2 uses x-www-form-urlencoded
+        final response = await dio.post(
+          '/auth/login',
+          data: {
+            'username': event.email, // OAuth2 spec uses 'username' field
+            'password': event.password,
+          },
+          options: Options(contentType: Headers.formUrlEncodedContentType),
+        );
+
+        if (response.statusCode == 200) {
+          final accessToken = response.data['access_token'];
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('access_token', accessToken);
+          emit(AuthSuccess());
+        } else {
+          emit(AuthFailure('Invalid credentials'));
+        }
+      } on DioException catch (e) {
+        if (e.response != null && e.response!.statusCode == 401) {
+          emit(AuthFailure('Incorrect email or password.'));
+        } else {
+          emit(AuthFailure('Network error: \${e.message}'));
+        }
       } catch (e) {
         emit(AuthFailure(e.toString()));
       }
