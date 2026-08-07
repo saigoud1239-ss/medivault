@@ -1,4 +1,5 @@
 from typing import AsyncGenerator
+import uuid
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -36,7 +37,12 @@ async def get_current_user(
             detail="Could not validate credentials",
         )
     
-    result = await db.execute(select(User).filter(User.id == token_data.sub))
+    try:
+        user_id = uuid.UUID(token_data.sub)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject")
+
+    result = await db.execute(select(User).filter(User.id == user_id))
     user = result.scalar_one_or_none()
     
     if not user:

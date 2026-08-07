@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/network/dio_client.dart';
+import 'package:medivault/core/network/dio_client.dart';
 
 // Events
 abstract class AuthEvent {}
@@ -50,7 +50,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         if (e.response != null && e.response!.statusCode == 401) {
           emit(AuthFailure('Incorrect email or password.'));
         } else {
-          emit(AuthFailure('Network error: \${e.message}'));
+          emit(AuthFailure('Network error: ${e.message}'));
         }
       } catch (e) {
         emit(AuthFailure(e.toString()));

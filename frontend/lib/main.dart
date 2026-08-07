@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'features/auth/presentation/bloc/auth_bloc.dart';
-import 'features/auth/presentation/pages/login_page.dart';
-import 'features/medications/presentation/pages/dashboard_page.dart';
+import 'package:medivault/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:medivault/features/auth/presentation/pages/login_page.dart';
+import 'package:medivault/features/auth/presentation/pages/register_page.dart';
+import 'package:medivault/features/medications/presentation/pages/dashboard_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Hive, Notifications, and Alarm Manager here in full implementation
-  
   runApp(const MediVaultApp());
 }
 
@@ -20,6 +18,12 @@ final GoRouter _router = GoRouter(
       path: '/login',
       builder: (BuildContext context, GoRouterState state) {
         return const LoginPage();
+      },
+    ),
+    GoRoute(
+      path: '/register',
+      builder: (BuildContext context, GoRouterState state) {
+        return const RegisterPage();
       },
     ),
     GoRoute(
@@ -42,12 +46,12 @@ class MediVaultApp extends StatelessWidget {
       ],
       child: MaterialApp.router(
         title: 'MediVault',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.dark,
-          colorSchemeSeed: const Color(0xFF00FFB2), // Vibrant mint green accent
-          scaffoldBackgroundColor: const Color(0xFF0A0E17), // Deep space blue/black
-          fontFamily: 'Inter',
+          colorSchemeSeed: const Color(0xFF00FFB2),
+          scaffoldBackgroundColor: const Color(0xFF0A0E17),
         ),
         routerConfig: _router,
       ),
