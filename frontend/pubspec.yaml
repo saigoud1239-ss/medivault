@@ -1,0 +1,30 @@
+name: medivault
+description: A cross-platform healthcare management app.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^8.1.3
+  go_router: ^12.1.1
+  dio: ^5.3.3
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  flutter_local_notifications: ^16.1.0
+  android_alarm_manager_plus: ^3.0.3
+  shared_preferences: ^2.2.1
+  json_annotation: ^4.8.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.6
+  json_serializable: ^6.7.1
+  lints: ^2.1.1
+
+flutter:
+  uses-material-design: true
